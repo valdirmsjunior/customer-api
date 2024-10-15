@@ -2,34 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\API\BaseController;
+use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class CustomerController extends Controller
+class CustomerController extends BaseController
 {
 
-    public function index()
+    public function index(): JsonResponse
     {
         $customer = Customer::all();
-        return response()->json([
-            'status' => true,
-            'message' => 'Customer retrieved successfully',
-            'data' => $customer
-        ], 200);
+        return $this->sendResponse(CustomerResource::collection($customer), 'Customer retrieved successfully.');
+
     }
 
     public function show($id)
     {
         $customer = Customer::findOrFail($id);
-        return response()->json([
-            'status' => true,
-            'message' => 'Customer found successfully',
-            'data' => $customer
-        ], 200);
+
+        if (is_null($customer)) {
+            return $this->sendError('Customer not found.');
+        }
+
+        return $this->sendResponse(new CustomerResource($customer), 'Customer retrieved successfully.');
+
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -37,53 +39,35 @@ class CustomerController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
+            return $this->sendError('Validation Error.', $validator->errors());
         }
 
         $customer = Customer::create($request->all());
-        return response()->json([
-            'status' => true,
-            'message' => 'Customer created successfully',
-            'data' => $customer
-        ], 201);
+
+        return $this->sendResponse(new CustomerResource($customer), 'Customer created successfully.');
+
     }
-    public function update(Request $request, $id)
+    public function update(Request $request, Customer $customer): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:customers,email,' . $id,
+            'email' => 'required|string|email|max:255|unique:customers,email,' . $customer->id,
         ]);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => $validator->errors()
-            ], 422);
+        if($validator->fails()){
+            return $this->sendError('Validation Error.', $validator->errors());
         }
 
-        $customer = Customer::findOrFail($id);
         $customer->update($request->all());
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Customer updated successfully',
-            'data' => $customer
-        ], 200);
+        return $this->sendResponse(new CustomerResource($customer), 'Customer updated successfully.');
+
     }
 
-    public function destroy($id)
+    public function destroy(Customer $customer): JsonResponse
     {
-        $customer = Customer::findOrFail($id);
         $customer->delete();
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Customer deleted successfully'
-        ], 204);
+        return $this->sendResponse([], 'Customer deleted successfully.');
     }
 }
