@@ -5,23 +5,27 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\API\BaseController;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use App\Services\CustomerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class CustomerController extends BaseController
 {
+    public function __construct(protected CustomerService $customerService) {
+
+    }
 
     public function index(): JsonResponse
     {
-        $customer = Customer::all();
+        $customer = $this->customerService->all();
         return $this->sendResponse(CustomerResource::collection($customer), 'Customer retrieved successfully.');
 
     }
 
     public function show($id)
     {
-        $customer = Customer::findOrFail($id);
+        $customer = $this->customerService->find($id);
 
         if (is_null($customer)) {
             return $this->sendError('Customer not found.');
@@ -42,7 +46,7 @@ class CustomerController extends BaseController
             return $this->sendError('Validation Error.', $validator->errors());
         }
 
-        $customer = Customer::create($request->all());
+        $customer = $this->customerService->create($request->all());
 
         return $this->sendResponse(new CustomerResource($customer), 'Customer created successfully.');
 
@@ -58,15 +62,15 @@ class CustomerController extends BaseController
             return $this->sendError('Validation Error.', $validator->errors());
         }
 
-        $customer->update($request->all());
+        $custome = $this->customerService->update($request->all(), $customer->id);
 
-        return $this->sendResponse(new CustomerResource($customer), 'Customer updated successfully.');
+        return $this->sendResponse(new CustomerResource($custome), 'Customer updated successfully.');
 
     }
 
     public function destroy(Customer $customer): JsonResponse
     {
-        $customer->delete();
+        $this->customerService->delete($customer->id);
 
         return $this->sendResponse([], 'Customer deleted successfully.');
     }
